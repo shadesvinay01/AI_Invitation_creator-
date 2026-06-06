@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>InviteAI Pro — Premium Invitation Creator</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400;1,700&family=DM+Sans:wght@300;400;500;600;700;800&family=Great+Vibes&family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Satisfy&family=Alex+Brush&family=Allura&family=Parisienne&family=Dancing+Script:wght@400;600;700&family=Marcellus&family=Cinzel:wght@400;600;700;900&family=Italiana&display=swap" rel="stylesheet">
+<script>
+tailwind.config={theme:{extend:{colors:{bg:'#06060c',surface:'#0d0d18',card:'#12121f',border:'#222238',borderLight:'#333350',accent:'#d4a843',accentLight:'#e8c96e',accentDark:'#b0882a',muted:'#6a6a80',fg:'#f0ede4',fgDim:'#a8a498',danger:'#ef4444',success:'#4ade80'}}}}
+</script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:#06060c;color:#f0ede4;overflow-x:hidden;min-height:100vh}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:#0d0d18}
+::-webkit-scrollbar-thumb{background:#222238;border-radius:8px}
+::-webkit-scrollbar-thumb:hover{background:#333350}
+
+/* Ambient orbs */
+.orb{position:fixed;border-radius:50%;filter:blur(140px);opacity:.06;animation:od 30s ease-in-out infinite;pointer-events:none;z-index:0}
+.orb:nth-child(1){width:600px;height:600px;background:#d4a843;top:-15%;left:-8%}
+.orb:nth-child(2){width:500px;height:500px;background:#c0392b;bottom:-10%;right:-5%;animation-delay:-10s}
+.orb:nth-child(3){width:400px;height:400px;background:#6c5ce7;top:45%;left:55%;animation-delay:-20s}
+@keyframes od{0%,100%{transform:translate(0,0) scale(1)}25%{transform:translate(50px,-40px) scale(1.08)}50%{transform:translate(-30px,50px) scale(.92)}75%{transform:translate(40px,30px) scale(1.04)}}
+
+/* Grid overlay */
+.grid-overlay{position:fixed;inset:0;background-image:linear-gradient(rgba(212,168,67,.01) 1px,transparent 1px),linear-gradient(90deg,rgba(212,168,67,.01) 1px,transparent 1px);background-size:70px 70px;pointer-events:none;z-index:0}
+
+/* Step panels */
+.step-panel{display:none;opacity:0;transform:translateY(24px)}
+.step-panel.active{display:block;animation:stepIn .5s cubic-bezier(.22,1,.36,1) forwards}
+@keyframes stepIn{to{opacity:1;transform:translateY(0)}}
+
+/* Floating inputs */
+.fg{position:relative}
+.fi{background:#0d0d18;border:1.5px solid #222238;color:#f0ede4;border-radius:14px;padding:20px 16px 6px;width:100%;transition:all .3s;font-family:'DM Sans',sans-serif;font-size:14px;outline:none}
+.fi:hover{border-color:#333350}
+.fi:focus{border-color:#d4a843;box-shadow:0 0 0 4px rgba(212,168,67,.08),0 0 20px rgba(212,168,67,.04)}
+.fl{position:absolute;left:16px;top:50%;transform:translateY(-50%);color:#6a6a80;font-size:13px;pointer-events:none;transition:all .25s cubic-bezier(.22,1,.36,1)}
+.fi:focus~.fl,.fi:not(:placeholder-shown)~.fl{top:8px;font-size:9px;color:#d4a843;font-weight:700;letter-spacing:.6px;text-transform:uppercase}
+
+/* Event cards */
+.ec{position:relative;border-radius:16px;border:1.5px solid #222238;background:linear-gradient(135deg,#12121f,#0f0f1a);overflow:hidden;cursor:pointer;transition:all .35s cubic-bezier(.22,1,.36,1);padding:16px 10px;text-align:center}
+.ec:hover{transform:translateY(-3px);border-color:#333350;box-shadow:0 8px 30px rgba(0,0,0,.4),0 0 0 1px rgba(212,168,67,.1)}
+.ec.sel{border-color:#d4a843;background:linear-gradient(135deg,rgba(212,168,67,.08),rgba(212,168,67,.02));box-shadow:0 0 0 2px rgba(212,168,67,.25),0 8px 32px rgba(212,168,67,.1),inset 0 0 40px rgba(212,168,67,.03)}
+.ec.sel::after{content:'\f00c';font-family:'Font Awesome 6 Free';font-weight:900;position:absolute;top:8px;right:8px;background:#d4a843;color:#06060c;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;z-index:2;box-shadow:0 2px 8px rgba(0,0,0,.4)}
+.ec .ei{transition:all .3s}
+.ec.sel .ei{color:#d4a843!important;transform:scale(1.1)}
+
+/* Style cards */
+.sc2{position:relative;border-radius:14px;border:1.5px solid #222238;overflow:hidden;cursor:pointer;transition:all .35s cubic-bezier(.22,1,.36,1);background:#12121f}
+.sc2:hover{transform:translateY(-3px);border-color:#333350;box-shadow:0 6px 24px rgba(0,0,0,.35)}
+.sc2.sel{border-color:#d4a843;box-shadow:0 0 0 2px rgba(212,168,67,.3),0 6px 28px rgba(212,168,67,.12)}
+.sc2.sel::after{content:'\f00c';font-family:'Font Awesome 6 Free';font-weight:900;position:absolute;top:6px;right:6px;background:#d4a843;color:#06060c;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;z-index:2}
+
+/* Language pills */
+.lp{border-radius:100px;border:1.5px solid #222238;background:#12121f;cursor:pointer;transition:all .3s;padding:9px 20px;text-align:center;font-size:13px;font-weight:500}
+.lp:hover{border-color:#333350;background:#1a1a2a}
+.lp.sel{border-color:#d4a843;background:rgba(212,168,67,.1);color:#e8c96e;font-weight:700;box-shadow:0 0 16px rgba(212,168,67,.08)}
+
+/* Color swatches */
+.csw{width:40px;height:40px;border-radius:12px;cursor:pointer;border:3px solid transparent;transition:all .25s;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+.csw:hover{transform:scale(1.15);box-shadow:0 4px 16px rgba(0,0,0,.4)}
+.csw.sel{border-color:#f0ede4;box-shadow:0 0 0 3px #d4a843,0 4px 20px rgba(212,168,67,.2)}
+
+/* Step dots */
+.sdot{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;transition:all .5s;border:2px solid #222238;color:#6a6a80;flex-shrink:0;position:relative;background:#12121f}
+.sdot.act{border-color:#d4a843;color:#d4a843;background:rgba(212,168,67,.12);box-shadow:0 0 20px rgba(212,168,67,.15),0 0 0 6px rgba(212,168,67,.04);animation:actPulse 2s ease infinite}
+.sdot.dn{border-color:#4ade80;color:#06060c;background:#4ade80;box-shadow:0 0 14px rgba(74,222,128,.2)}
+@keyframes actPulse{0%,100%{box-shadow:0 0 20px rgba(212,168,67,.15),0 0 0 6px rgba(212,168,67,.04)}50%{box-shadow:0 0 28px rgba(212,168,67,.25),0 0 0 12px rgba(212,168,67,.02)}}
+.sline{height:3px;flex:1;background:#222238;transition:background .5s;min-width:20px;border-radius:2px}
+.sline.dn{background:linear-gradient(90deg,#4ade80,#d4a843)}
+.sline.act{background:linear-gradient(90deg,#4ade80,#333350)}
+
+/* Loading overlay */
+.gov{position:fixed;inset:0;z-index:200;background:rgba(6,6,12,.96);display:none;align-items:center;justify-content:center;flex-direction:column;backdrop-filter:blur(12px)}
+.gov.sh{display:flex}
+.gring{width:80px;height:80px;border:3px solid #222238;border-top-color:#d4a843;border-right-color:#e8c96e;border-radius:50%;animation:gs .8s linear infinite}
+@keyframes gs{to{transform:rotate(360deg)}}
+.gtext{font-family:'Playfair Display',serif;font-size:1.4em;font-weight:700;margin-top:20px;color:#d4a843;animation:gf 2s ease infinite}
+@keyframes gf{0%,100%{opacity:1}50%{opacity:.5}}
+
+/* Toast notifications */
+.tbox{position:fixed;bottom:24px;right:24px;z-index:300;display:flex;flex-direction:column;gap:10px}
+.tst{padding:14px 20px;border-radius:14px;display:flex;align-items:center;gap:10px;font-size:13px;font-weight:600;backdrop-filter:blur(20px);animation:ti .4s cubic-bezier(.22,1,.36,1);border-left:4px solid;min-width:280px;box-shadow:0 12px 40px rgba(0,0,0,.5);background:rgba(18,18,31,.9)}
+@keyframes ti{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}
+.tst-out{animation:to .3s ease forwards}
+@keyframes to{to{opacity:0;transform:translateX(40px)}}
+
+/* Card reveal */
+.card-reveal{animation:cR .7s cubic-bezier(.34,1.56,.64,1)}
+@keyframes cR{from{opacity:0;transform:scale(.85);filter:blur(8px)}to{opacity:1;transform:scale(1);filter:blur(0)}}
+
+/* Download buttons */
+.dlbtn{border-radius:16px;transition:all .35s cubic-bezier(.22,1,.36,1);position:relative;overflow:hidden}
+.dlbtn:hover{transform:translateY(-3px);box-shadow:0 12px 32px rgba(0,0,0,.4)}
+.dlbtn:active{transform:translateY(0)}
+.dlbtn::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,transparent,rgba(255,255,255,.05),transparent);opacity:0;transition:opacity .3s}
+.dlbtn:hover::after{opacity:1}
+
+/* Preview wrapper */
+.pwrap{background:linear-gradient(135deg,#1a1a2a,#10101c);border:1px solid #222238;border-radius:24px;padding:28px;position:relative;overflow:hidden}
+.pwrap::before{content:'';position:absolute;inset:-1px;border-radius:24px;background:linear-gradient(135deg,rgba(212,168,67,.2),transparent 40%,rgba(212,168,67,.1) 80%);z-index:0;pointer-events:none}
+.pwrap::after{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(212,168,67,.3),transparent);z-index:1}
+
+/* === INVITATION CARD REDESIGN === */
+.inv-card-wrap{display:flex;justify-content:center;align-items:flex-start;padding:20px 0;position:relative;z-index:2}
+.inv-card{width:680px;min-height:960px;position:relative;border-radius:8px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.5),0 0 0 1px rgba(212,168,67,.1),0 0 100px rgba(212,168,67,.05)}
+
+/* Card inner content */
+.card-inner{position:relative;z-index:2;padding:70px 60px;display:flex;flex-direction:column;justify-content:center;min-height:960px}
+.card-bg-svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0}
+.card-bg-color{position:absolute;inset:0;z-index:0}
+
+/* Card typography */
+.card-title{font-size:14px;letter-spacing:6px;text-transform:uppercase;margin-bottom:8px;text-align:center}
+.card-divider{display:flex;align-items:center;justify-content:center;gap:10px;margin:20px 0}
+.card-divider-line{height:1px;flex:1;max-width:60px}
+.card-divider-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.card-event-name{font-size:42px;line-height:1.15;margin-bottom:16px;text-align:center;font-weight:700}
+.card-body{font-size:15px;line-height:1.9;text-align:center;margin-bottom:20px;max-width:460px;margin-left:auto;margin-right:auto}
+.card-detail-label{font-size:10px;letter-spacing:4px;text-transform:uppercase;margin-bottom:10px;text-align:center;font-weight:700}
+.card-detail-text{font-size:16px;line-height:2;text-align:center}
+.card-closing{font-size:14px;line-height:2;text-align:center;margin-top:24px;font-style:italic}
+
+/* Decorative corners */
+.card-corner{position:absolute;width:60px;height:60px;z-index:3;pointer-events:none}
+.card-corner-tl{top:30px;left:30px;border-top:2px solid;border-left:2px solid}
+.card-corner-tr{top:30px;right:30px;border-top:2px solid;border-right:2px solid}
+.card-corner-bl{bottom:30px;left:30px;border-bottom:2px solid;border-left:2px solid}
+.card-corner-br{bottom:30px;right:30px;border-bottom:2px solid;border-right:2px solid}
+
+/* Fullscreen viewer */
+.fs-overlay{position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.92);display:none;align-items:center;justify-content:center;backdrop-filter:blur(10px);cursor:zoom-out}
+.fs-overlay.show{display:flex;animation:fadeIn .3s ease}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.fs-card{transform:scale(1);transition:transform .4s cubic-bezier(.22,1,.36,1);cursor:default;max-height:95vh;overflow:auto;border-radius:4px;box-shadow:0 30px 80px rgba(0,0,0,.6)}
+.fs-close{position:fixed;top:20px;right:20px;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:401;font-size:18px;transition:all .3s}
+.fs-close:hover{background:rgba(255,255,255,.15);transform:scale(1.05)}
+
+/* Zoom controls */
+.zoom-controls{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);z-index:401;display:flex;gap:8px;background:rgba(18,18,31,.9);border:1px solid #222238;border-radius:40px;padding:6px;backdrop-filter:blur(20px)}
+.zoom-btn{width:40px;height:40px;border-radius:50%;background:transparent;border:none;color:#f0ede4;cursor:pointer;font-size:18px;transition:all .3s;display:flex;align-items:center;justify-content:center}
+.zoom-btn:hover{background:rgba(212,168,67,.15);color:#d4a843}
+.zoom-label{display:flex;align-items:center;padding:0 8px;font-size:12px;font-weight:600;color:#a8a498}
+
+/* Mobile responsiveness */
+@media(max-width:768px){
+  .inv-card{width:100%;min-height:auto;border-radius:0}
+  .card-inner{padding:40px 24px;min-height:auto}
+  .card-event-name{font-size:28px}
+  .card-body{font-size:13px;max-width:100%}
+  .card-title{font-size:11px;letter-spacing:4px}
+  .card-corner{width:36px;height:36px}
+  .card-corner-tl{top:16px;left:16px}
+  .card-corner-tr{top:16px;right:16px}
+  .card-corner-bl{bottom:16px;left:16px}
+  .card-corner-br{bottom:16px;right:16px}
+  .pwrap{padding:12px}
+  .fs-card{width:100%!important;border-radius:0}
+}
+
+/* Validation error */
+.val-err{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:14px;padding:14px 18px;color:#fca5a5;font-size:13px;display:none;align-items:center;gap:10px;margin-bottom:18px}
+.val-err.show{display:flex;animation:shake .4s ease}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+
+/* Section icons */
+.sico{width:42px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;background:rgba(212,168,67,.1);color:#d4a843;font-size:16px;flex-shrink:0;border:1px solid rgba(212,168,67,.15)}
+
+/* Quick style buttons */
+.qs-btn{padding:7px 16px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;transition:all .25s;border:1.5px solid #222238;background:#12121f;color:#a8a498;white-space:nowrap}
+.qs-btn:hover{border-color:#333350;color:#f0ede4}
+.qs-btn.sel{border-color:#d4a843;background:rgba(212,168,67,.1);color:#e8c96e}
+
+/* Harmony chips */
+.harmony-chip{padding:8px 16px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;transition:all .25s;border:2px solid transparent;white-space:nowrap}
+.harmony-chip:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.3)}
+
+/* Edit section */
+.edit-input{background:#0d0d18;border:1.5px solid #222238;color:#f0ede4;border-radius:12px;padding:12px 14px;width:100%;transition:all .3s;font-family:'DM Sans',sans-serif;font-size:14px;outline:none}
+.edit-input:focus{border-color:#d4a843;box-shadow:0 0 0 3px rgba(212,168,67,.08)}
+.edit-label{display:block;font-size:11px;color:#6a6a80;margin-bottom:5px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+</style>
+</head>
+<body>
+
+<!-- Ambient Background -->
+<div class="orb"></div><div class="orb"></div><div class="orb"></div>
+<div class="grid-overlay"></div>
+
+<!-- Loading -->
+<div class="gov" id="gO">
+  <div class="gring"></div>
+  <p class="gtext">Crafting Your Masterpiece</p>
+  <p style="color:#6a6a80;font-size:13px;margin-top:6px">Weaving design, typography & elegance...</p>
+</div>
+
+<!-- Toast container -->
+<div class="tbox" id="tB"></div>
+
+<!-- Fullscreen viewer -->
+<div class="fs-overlay" id="fsOverlay" onclick="closeFullscreen(event)">
+  <button class="fs-close" onclick="closeFullscreen()"><i class="fa-solid fa-xmark"></i></button>
+  <div class="fs-card" id="fsCard" onclick="event.stopPropagation()"></div>
+  <div class="zoom-controls">
+    <button class="zoom-btn" onclick="zoomOut()"><i class="fa-solid fa-minus"></i></button>
+    <span class="zoom-label" id="zoomLabel">100%</span>
+    <button class="zoom-btn" onclick="zoomIn()"><i class="fa-solid fa-plus"></i></button>
+    <button class="zoom-btn" onclick="zoomReset()"><i class="fa-solid fa-arrows-to-dot"></i></button>
+  </div>
+</div>
+
+<!-- Main App -->
+<div class="relative z-10 min-h-screen flex flex-col">
+
+<!-- Header -->
+<header class="sticky top-0 z-50 backdrop-blur-xl bg-[#06060c]/80 border-b border-[#222238]/60">
+<div class="max-w-6xl mx-auto px-5 py-3.5 flex items-center justify-between">
+<div class="flex items-center gap-3">
+  <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-accent to-accentDark flex items-center justify-center shadow-lg shadow-accent/20">
+    <i class="fa-solid fa-wand-magic-sparkles text-[#06060c] text-xs"></i>
+  </div>
+  <span class="text-xl font-bold tracking-tight" style="font-family:'Playfair Display',serif">Invite<span class="text-accent">AI</span></span>
+  <span style="background:rgba(212,168,67,.1);border:1px solid rgba(212,168,67,.2);color:#d4a843;padding:3px 10px;border-radius:20px;font-size:9px;font-weight:700;letter-spacing:.5px">PRO</span>
+</div>
+<div class="flex items-center gap-0">
+  <div class="sdot act" data-s="1">1</div><div class="sline" id="ln1"></div>
+  <div class="sdot" data-s="2">2</div><div class="sline" id="ln2"></div>
+  <div class="sdot" data-s="3">3</div><div class="sline" id="ln3"></div>
+  <div class="sdot" data-s="4">4</div>
+</div>
+</div>
+</header>
+
+<main class="flex-1 py-8 px-4">
+<div class="max-w-4xl mx-auto">
+
+<!-- ============ STEP 1 ============ -->
+<section class="step-panel active" id="step1">
+<div class="flex items-center gap-4 mb-8">
+  <div class="sico"><i class="fa-solid fa-calendar-star"></i></div>
+  <div><h2 class="text-2xl font-bold tracking-tight" style="font-family:'Playfair Display',serif">Event Information</h2><p class="text-muted text-sm mt-0.5">Tell us about your special occasion</p></div>
+</div>
+
+<label class="block text-xs font-bold text-accent uppercase tracking-wider mb-3">Select Event Type</label>
+<div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-8" id="evGrid"></div>
+
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+<div class="fg sm:col-span-2"><input type="text" class="fi" id="eventName" placeholder=" "><label class="fl">Event Name *</label></div>
+<div class="fg"><input type="date" class="fi" id="eventDate" placeholder=" "><label class="fl">Date *</label></div>
+<div class="fg"><input type="time" class="fi" id="startTime" placeholder=" "><label class="fl">Start Time *</label></div>
+<div class="fg"><input type="time" class="fi" id="endTime" placeholder=" "><label class="fl">End Time (optional)</label></div>
+<div class="fg"><input type="text" class="fi" id="venue" placeholder=" "><label class="fl">Venue / Address *</label></div>
+<div class="fg"><input type="url" class="fi" id="mapsLink" placeholder=" "><label class="fl">Google Maps Link (optional)</label></div>
+</div>
+
+<div class="val-err" id="valErr1"><i class="fa-solid fa-circle-exclamation"></i><span id="valMsg1"></span></div>
+
+<div class="flex justify-end pt-4">
+<button id="btn1Next" class="px-7 py-3.5 bg-gradient-to-r from-accent to-accentDark text-[#06060c] font-bold rounded-2xl shadow-xl shadow-accent/20 hover:-translate-y-0.5 transition-all active:translate-y-0 text-sm tracking-wide">
+  Continue <i class="fa-solid fa-arrow-right ml-2"></i>
+</button>
+</div>
+</section>
+
+<!-- ============ STEP 2 ============ -->
+<section class="step-panel" id="step2">
+<div class="flex items-center gap-4 mb-8">
+  <div class="sico"><i class="fa-solid fa-users"></i></div>
+  <div><h2 class="text-2xl font-bold tracking-tight" style="font-family:'Playfair Display',serif">Host & RSVP</h2><p class="text-muted text-sm mt-0.5">Who's inviting & how to respond</p></div>
+</div>
+
+<div class="fg mb-5"><input type="text" class="fi" id="hostName" placeholder=" "><label class="fl">Host Name(s) *</label></div>
+
+<div class="bg-card/60 border border-border rounded-2xl p-6 mb-5">
+<h3 class="text-sm font-bold mb-4 flex items-center gap-2" style="font-family:'Playfair Display',serif"><i class="fa-solid fa-envelope-open-text text-accent"></i>RSVP Details</h3>
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+<div class="fg"><input type="text" class="fi" id="rsvpName" placeholder=" "><label class="fl">Contact Name</label></div>
+<div class="fg"><input type="date" class="fi" id="rsvpDeadline" placeholder=" "><label class="fl">RSVP Deadline</label></div>
+<div class="fg"><input type="tel" class="fi" id="rsvpPhone" placeholder=" "><label class="fl">Phone Number</label></div>
+<div class="fg"><input type="email" class="fi" id="rsvpEmail" placeholder=" "><label class="fl">Email Address</label></div>
+</div></div>
+
+<div class="bg-card/60 border border-border rounded-2xl p-6 mb-5">
+<h3 class="text-sm font-bold mb-4 flex items-center gap-2" style="font-family:'Playfair Display',serif"><i class="fa-solid fa-note-sticky text-accent"></i>Additional Notes</h3>
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+<div class="fg"><input type="text" class="fi" id="dressCode" placeholder=" "><label class="fl">Dress Code</label></div>
+<div class="fg"><input type="text" class="fi" id="parking" placeholder=" "><label class="fl">Parking Info</label></div>
+<div class="fg"><input type="text" class="fi" id="gifts" placeholder=" "><label class="fl">Gifts Policy</label></div>
+<div class="fg"><input type="text" class="fi" id="specialNotes" placeholder=" "><label class="fl">Special Instructions</label></div>
+</div></div>
+
+<div class="val-err" id="valErr2"><i class="fa-solid fa-circle-exclamation"></i><span id="valMsg2"></span></div>
+
+<div class="flex justify-between pt-4">
+<button id="btn2Back" class="px-5 py-3 border border-border hover:border-borderLight text-fgDim rounded-2xl transition-all text-sm font-semibold"><i class="fa-solid fa-arrow-left mr-2"></i>Back</button>
+<button id="btn2Next" class="px-7 py-3.5 bg-gradient-to-r from-accent to-accentDark text-[#06060c] font-bold rounded-2xl shadow-xl shadow-accent/20 hover:-translate-y-0.5 transition-all text-sm tracking-wide">Continue <i class="fa-solid fa-arrow-right ml-2"></i></button>
+</div>
+</section>
+
+<!-- ============ STEP 3 ============ -->
+<section class="step-panel" id="step3">
+<div class="flex items-center gap-4 mb-8">
+  <div class="sico"><i class="fa-solid fa-paintbrush"></i></div>
+  <div><h2 class="text-2xl font-bold tracking-tight" style="font-family:'Playfair Display',serif">Style & Design</h2><p class="text-muted text-sm mt-0.5">Craft your invitation's personality</p></div>
+</div>
+
+<label class="block text-xs font-bold text-accent uppercase tracking-wider mb-3">Choose a Style</label>
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8" id="stGrid"></div>
+
+<label class="block text-xs font-bold text-accent uppercase tracking-wider mb-3">Quick Color Harmonies</label>
+<div class="flex flex-wrap gap-2 mb-6" id="harmonyRow"></div>
+
+<label class="block text-xs font-bold text-accent uppercase tracking-wider mb-3">Custom Colors</label>
+<div class="bg-card/60 border border-border rounded-2xl p-5 mb-6">
+<div class="flex flex-wrap gap-3 mb-5" id="colPresets"></div>
+<div class="flex items-center gap-6 flex-wrap">
+<div class="flex items-center gap-2.5">
+  <input type="color" id="priCol" value="#d4a843" class="w-10 h-10 rounded-xl cursor-pointer border-2 border-border bg-transparent">
+  <div><div class="text-[10px] text-muted uppercase tracking-wider font-bold">Primary</div><div class="text-xs font-mono text-fgDim" id="priHex">#d4a843</div></div>
+</div>
+<div class="flex items-center gap-2.5">
+  <input type="color" id="secCol" value="#1a1a2e" class="w-10 h-10 rounded-xl cursor-pointer border-2 border-border bg-transparent">
+  <div><div class="text-[10px] text-muted uppercase tracking-wider font-bold">Secondary</div><div class="text-xs font-mono text-fgDim" id="secHex">#1a1a2e</div></div>
+</div>
+<div class="flex items-center gap-2.5">
+  <input type="color" id="terCol" value="#f0ede4" class="w-10 h-10 rounded-xl cursor-pointer border-2 border-border bg-transparent">
+  <div><div class="text-[10px] text-muted uppercase tracking-wider font-bold">Text</div><div class="text-xs font-mono text-fgDim" id="terHex">#f0ede4</div></div>
+</div>
+</div></div>
+
+<label class="block text-xs font-bold text-accent uppercase tracking-wider mb-3">Language</label>
+<div class="flex flex-wrap gap-2.5 mb-6" id="lgGrid"></div>
+
+<label class="block text-xs font-bold text-accent uppercase tracking-wider mb-3">Custom Message (Optional)</label>
+<div class="fg mb-6"><textarea class="fi h-28 resize-none" id="customMsg" placeholder=" "></textarea><label class="fl">Personal message or leave blank for AI generation</label></div>
+
+<div class="val-err" id="valErr3"><i class="fa-solid fa-circle-exclamation"></i><span id="valMsg3"></span></div>
+
+<div class="flex justify-between pt-4">
+<button id="btn3Back" class="px-5 py-3 border border-border hover:border-borderLight text-fgDim rounded-2xl transition-all text-sm font-semibold"><i class="fa-solid fa-arrow-left mr-2"></i>Back</button>
+<button id="btn3Gen" class="px-8 py-3.5 bg-gradient-to-r from-accent to-accentDark text-[#06060c] font-bold rounded-2xl shadow-xl shadow-accent/20 hover:-translate-y-0.5 transition-all text-sm tracking-wide"><i class="fa-solid fa-wand-magic-sparkles mr-2"></i>Generate Invitation</button>
+</div>
+</section>
+
+<!-- ============ STEP 4: PREVIEW ============ -->
+<section class="step-panel" id="step4">
+<div class="flex items-center justify-between mb-6 flex-wrap gap-4">
+<div class="flex items-center gap-4">
+  <div class="sico"><i class="fa-solid fa-sparkles"></i></div>
+  <div><h2 class="text-2xl font-bold tracking-tight" style="font-family:'Playfair Display',serif">Your Invitation</h2><p class="text-muted text-sm mt-0.5">Click card to view fullscreen</p></div>
+</div>
+<div class="flex gap-2 flex-wrap">
+  <button id="btnQR" class="px-4 py-2 border border-border hover:border-accent text-fgDim hover:text-accent rounded-xl transition-all text-xs font-semibold"><i class="fa-solid fa-qrcode mr-1.5"></i>QR Code</button>
+  <button id="btnRegen" class="px-4 py-2 border border-border hover:border-accent text-fgDim hover:text-accent rounded-xl transition-all text-xs font-semibold"><i class="fa-solid fa-rotate mr-1.5"></i>Regenerate</button>
+  <button id="btn4Back" class="px-4 py-2 border border-border hover:border-borderLight text-fgDim rounded-xl transition-all text-xs font-semibold"><i class="fa-solid fa-pen mr-1.5"></i>Edit</button>
+</div>
+</div>
+
+<!-- AI Info Panels -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-5" id="aiPanels"></div>
+
+<!-- Quick Style Switcher -->
+<div class="flex items-center gap-2 mb-4 overflow-x-auto pb-2" id="qStyle"></div>
+
+<!-- CARD PREVIEW -->
+<div class="pwrap mb-6">
+  <div class="inv-card-wrap">
+    <div id="invCard" class="inv-card card-reveal" onclick="openFullscreen()" title="Click to view fullscreen" style="cursor:zoom-in"></div>
+  </div>
+</div>
+
+<!-- Edit Text -->
+<div class="bg-card/60 border border-border rounded-2xl p-6 mb-5">
+<h3 class="text-sm font-bold mb-4 flex items-center gap-2" style="font-family:'Playfair Display',serif"><i class="fa-solid fa-pen-to-square text-accent"></i>Edit Text</h3>
+<div class="space-y-4" id="editSec"></div>
+</div>
+
+<!-- Downloads -->
+<div class="bg-card/60 border border-border rounded-2xl p-6 mb-5">
+<h3 class="text-sm font-bold mb-4 flex items-center gap-2" style="font-family:'Playfair Display',serif"><i class="fa-solid fa-cloud-arrow-down text-accent"></i>Download & Share</h3>
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+<button id="dlPng" class="dlbtn bg-gradient-to-br from-accent to-accentDark text-[#06060c] font-bold py-4 px-4 flex items-center gap-3 justify-center"><i class="fa-solid fa-image text-lg"></i><div class="text-left"><div class="text-sm">PNG</div><div class="text-[10px] opacity-70">2.5x HD</div></div></button>
+<button id="dlPdf" class="dlbtn bg-surface border border-border text-fg font-bold py-4 px-4 flex items-center gap-3 justify-center hover:border-accent/30"><i class="fa-solid fa-file-pdf text-lg text-red-400"></i><div class="text-left"><div class="text-sm">PDF</div><div class="text-[10px] text-muted">Print-ready</div></div></button>
+<button id="dlSvg" class="dlbtn bg-surface border border-border text-fg font-bold py-4 px-4 flex items-center gap-3 justify-center hover:border-accent/30"><i class="fa-solid fa-vector-square text-lg text-purple-400"></i><div class="text-left"><div class="text-sm">SVG</div><div class="text-[10px] text-muted">Editable</div></div></button>
+<button id="shareB" class="dlbtn bg-surface border border-border text-fg font-bold py-4 px-4 flex items-center gap-3 justify-center hover:border-accent/30"><i class="fa-solid fa-share-nodes text-lg text-green-400"></i><div class="text-left"><div class="text-sm">Share</div><div class="text-[10px] text-muted">Copy link</div></div></button>
+</div></div>
+
+<div class="flex justify-start">
+<button id="btn4Back2" class="px-5 py-3 border border-border hover:border-borderLight text-fgDim rounded-2xl transition-all text-sm font-semibold"><i class="fa-solid fa-arrow-left mr-2"></i>Back</button>
+</div>
+</section>
+
+</div>
+</main>
+</div>
+
+<script>
+/* ===== APP STATE ===== */
+const APP = {
+  step: 1, evType: '', style: 'luxury_gold', lang: 'english',
+  pc: '#d4a843', sc: '#12121f', tc: '#f0ede4', cpreset: 'gold', gen: null,
+  fsZoom: 1
+};
+
+/* ===== DATA ===== */
+const EVTS = [
+  {id:'wedding',icon:'fa-ring',l:'Wedding',c:'#e8b4b8'},
+  {id:'birthday',icon:'fa-cake-candles',l:'Birthday',c:'#f9c74f'},
+  {id:'engagement',icon:'fa-gem',l:'Engagement',c:'#90bee5'},
+  {id:'baby-shower',icon:'fa-baby',l:'Baby Shower',c:'#b5ead7'},
+  {id:'housewarming',icon:'fa-house-chimney',l:'Housewarming',c:'#ffdac1'},
+  {id:'anniversary',icon:'fa-heart',l:'Anniversary',c:'#ff9aa2'},
+  {id:'corporate',icon:'fa-building',l:'Corporate',c:'#c7ceea'},
+  {id:'graduation',icon:'fa-graduation-cap',l:'Graduation',c:'#f0c27a'},
+  {id:'retirement',icon:'fa-umbrella-beach',l:'Retirement',c:'#a8dadc'},
+  {id:'custom',icon:'fa-wand-magic-sparkles',l:'Custom',c:'#d4a843'}
+];
+
+const STYS = {
+  luxury_gold:{l:'Luxury Gold',icon:'fa-crown',bg:'linear-gradient(160deg,#0a0a1a,#12122a,#0a0a1a)',tC:'#f0ede4',aC:'#d4a843',sC:'#a09888',dk:true,cf:'"Playfair Display",serif',bf:'"Cormorant Garamond",serif',deco:'ornate'},
+  royal_crest:{l:'Royal Crest',icon:'fa-chess-queen',bg:'linear-gradient(160deg,#120a24,#1f1240,#120a24)',tC:'#f0ede4',aC:'#d4a843',sC:'#b0a898',dk:true,cf:'"Playfair Display",serif',bf:'"Cormorant Garamond",serif',deco:'crest'},
+  celestial:{l:'Celestial Night',icon:'fa-moon',bg:'linear-gradient(180deg,#040410,#0a0f24,#040410)',tC:'#e8e4dc',aC:'#d4a853',sC:'#8090a0',dk:true,cf:'"Playfair Display",serif',bf:'"Cormorant Garamond",serif',deco:'stars'},
+  modern_clean:{l:'Modern Clean',icon:'fa-minus',bg:'#ffffff',tC:'#111111',aC:'#111111',sC:'#666666',dk:false,cf:'"DM Sans",sans-serif',bf:'"DM Sans",sans-serif',deco:'minimal'},
+  classic_double:{l:'Classic Elegance',icon:'fa-border-all',bg:'linear-gradient(160deg,#fdf6e3,#f5e6c8,#ecdbb5)',tC:'#3d2c1e',aC:'#b8860b',sC:'#7a6040',dk:false,cf:'"Playfair Display",serif',bf:'"Cormorant Garamond",serif',deco:'classic'},
+  floral_vine:{l:'Floral Garden',icon:'fa-seedling',bg:'linear-gradient(180deg,#fef9f4,#fdf0e6,#fce4d6)',tC:'#5a3e36',aC:'#c47a72',sC:'#8a6a5e',dk:false,cf:'"Great Vibes",cursive',bf:'"Cormorant Garamond",serif',deco:'floral'},
+  art_deco:{l:'Art Deco',icon:'fa-diamond',bg:'linear-gradient(180deg,#f5f0e8,#ebe5d9)',tC:'#1a1a1a',aC:'#c9943e',sC:'#555555',dk:false,cf:'"Marcellus",serif',bf:'"DM Sans",sans-serif',deco:'geometric'},
+  rose_garden:{l:'Rose Garden',icon:'fa-spa',bg:'linear-gradient(180deg,#fdf2f4,#f8e8ec,#fdf2f4)',tC:'#5a2030',aC:'#c0506a',sC:'#9a6878',dk:false,cf:'"Great Vibes",cursive',bf:'"Cormorant Garamond",serif',deco:'roses'},
+  lace_trim:{l:'Vintage Lace',icon:'fa-heart',bg:'linear-gradient(180deg,#fff5f5,#fff0f0)',tC:'#5a3035',aC:'#c4707a',sC:'#9a7078',dk:false,cf:'"Parisienne",cursive',bf:'"Cormorant Garamond",serif',deco:'lace'},
+  ornate_filigree:{l:'Ornate Filigree',icon:'fa-feather-pointed',bg:'linear-gradient(180deg,#faf8f5,#f0ece4)',tC:'#2d2a26',aC:'#a07528',sC:'#8a847a',dk:false,cf:'"Playfair Display",serif',bf:'"Libre Baskerville",serif',deco:'filigree'},
+  tribal_ethnic:{l:'Tribal Ethnic',icon:'fa-fire',bg:'linear-gradient(160deg,#f5e6d3,#e8d5b8)',tC:'#3d2b1f',aC:'#c0392b',sC:'#7a5a3e',dk:false,cf:'"Playfair Display",serif',bf:'"DM Sans",sans-serif',deco:'tribal'},
+  rope_nautical:{l:'Nautical',icon:'fa-anchor',bg:'linear-gradient(180deg,#f0f4f8,#e8eef4)',tC:'#2c3e50',aC:'#2980b9',sC:'#5a7a8a',dk:false,cf:'"DM Sans",sans-serif',bf:'"DM Sans",sans-serif',deco:'nautical'}
+};
+
+const PRESETS = {
+  gold:{p:'#d4a843',s:'#12121f',t:'#f0ede4'},rose:{p:'#c45e6a',s:'#fdf6f0',t:'#3d2c2e'},
+  emerald:{p:'#2d6a4f',s:'#0f1a15',t:'#e8f0ec'},royal:{p:'#7b2d8e',s:'#120a1f',t:'#f0e8f5'},
+  sunset:{p:'#e76f51',s:'#1a1a2e',t:'#fdf0e8'},ocean:{p:'#0077b6',s:'#0a1628',t:'#e8f4fd'},
+  blush:{p:'#d4a0a0',s:'#2d1f20',t:'#fdf5f5'},charcoal:{p:'#555',s:'#ffffff',t:'#111'},
+  terra:{p:'#c1666b',s:'#1f1a1a',t:'#fdf0f0'},sage:{p:'#8f9e8b',s:'#1a1f1a',t:'#f0f5f0'}
+};
+
+const HARMONIES = [
+  {n:'Gold & Navy',p:'#d4a843',s:'#0f1629',t:'#f0e6d3'},
+  {n:'Blush & Sage',p:'#d4a0a0',s:'#8f9e8b',t:'#f5f0e8'},
+  {n:'Midnight & Copper',p:'#1a1a2e',s:'#b87333',t:'#e8d5b7'},
+  {n:'Emerald & Cream',p:'#2d6a4f',s:'#f5f0e0',t:'#1a2a22'},
+  {n:'Burgundy & Gold',p:'#722f37',s:'#d4af37',t:'#f5ecd7'},
+  {n:'Teal & Coral',p:'#2a9d8f',s:'#e76f51',t:'#1a2a28'},
+  {n:'Plum & Silver',p:'#6b3a5b',s:'#c0c0c0',t:'#1f1520'},
+  {n:'Ivory & Bronze',p:'#f5f0e0',s:'#8b6914',t:'#2d2010'}
+];
+
+/* ===== SEEDED RNG ===== */
+function seededRandom(seed) {
+  let s = seed;
+  return function() { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; };
+}
+
+/* ===== BACKGROUND SVG PATTERNS ===== */
+function bgSVG(id, a, dk, W, H) {
+  W = W || 680; H = H || 960;
+  const op = dk ? 0.08 : 0.1, op2 = dk ? 0.05 : 0.06, op3 = dk ? 0.1 : 0.12;
+  const rng = seededRandom(id.charCodeAt(0) * 1000 + id.charCodeAt(id.length-1));
+  const m = Math.min(W, H), cx = W/2, cy = H/2;
+
+  const P = {
+    luxury_gold: (() => {
+      const lcx = W/2, lcy = H*0.38, maxR = Math.max(W, H)*1.4;
+      return `<defs><radialGradient id="lgg" cx="50%" cy="35%" r="55%"><stop offset="0%" stop-color="${a}" stop-opacity="0.1"/><stop offset="100%" stop-color="${a}" stop-opacity="0"/></radialGradient><clipPath id="lgc"><rect width="${W}" height="${H}"/></clipPath></defs><rect width="${W}" height="${H}" fill="url(#lgg)"/>
+      <g clip-path="url(#lgc)" stroke="${a}" stroke-width="0.3" opacity="${op*0.8}">${Array.from({length:30},(_,i)=>{const ang=-50+i*3.5,rad=ang*Math.PI/180;return`<line x1="${lcx}" y1="${lcy-30}" x2="${lcx+maxR*Math.sin(rad)}" y2="${lcy-30+maxR*Math.cos(rad)}"/>`}).join('')}</g>
+      <g transform="translate(${lcx},${lcy})" fill="none" stroke="${a}" opacity="${op2*1.5}">${[maxR*0.18,maxR*0.12,maxR*0.06].map(r=>`<circle r="${r}" stroke-width="${r>maxR*0.1?1.2:0.6}"/>`).join('')}</g>`;
+    })(),
+
+    royal_crest: (() => {
+      const s = m*0.12;
+      return `<defs><radialGradient id="rcg" cx="50%" cy="38%" r="50%"><stop offset="0%" stop-color="${a}" stop-opacity="0.08"/><stop offset="100%" stop-color="${a}" stop-opacity="0"/></radialGradient></defs><rect width="${W}" height="${H}" fill="url(#rcg)"/>
+      <g transform="translate(${cx},${H*0.08})" fill="${a}" opacity="${dk?0.4:0.25}">
+        <path d="M${-s*0.8},${s*0.4} L${-s*0.55},${-s*0.4} L${-s*0.25},${s*0.08} L0,${-s*0.55} L${s*0.25},${s*0.08} L${s*0.55},${-s*0.4} L${s*0.8},${s*0.4} Z"/>
+        <rect x="${-s*0.85}" y="${s*0.4}" width="${s*1.7}" height="${s*0.15}" rx="${s*0.04}"/>
+        <circle cx="${-s*0.55}" cy="${-s*0.4}" r="${s*0.09}"/><circle cx="0" cy="${-s*0.55}" r="${s*0.1}"/><circle cx="${s*0.55}" cy="${-s*0.4}" r="${s*0.09}"/>
+      </g>`;
+    })(),
+
+    celestial: (() => {
+      let g = `<defs><radialGradient id="ceg" cx="50%" cy="25%" r="50%"><stop offset="0%" stop-color="#1a2040" stop-opacity="0.6"/><stop offset="100%" stop-color="transparent" stop-opacity="0"/></radialGradient></defs><rect width="${W}" height="${H}" fill="url(#ceg)"/><g fill="#fff">`;
+      for(let i=0;i<50;i++){const x=10+rng()*(W-20),y=10+rng()*(H-20),r=rng()*1.4+0.3,o=rng()*0.15+0.03;g+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r.toFixed(1)}" opacity="${o.toFixed(2)}"/>`}
+      return g+`</g>`;
+    })(),
+
+    floral_vine: (() => {
+      const s = m*0.08;
+      let g = '';
+      [[W*0.08,H*0.08],[W*0.92,H*0.08],[W*0.08,H*0.92],[W*0.92,H*0.92]].forEach(([x,y])=>{
+        const sx=x<W/2?1:-1,sy=y<H/2?1:-1;
+        g+=`<g transform="translate(${x},${y}) scale(${sx},${sy})" fill="none" stroke="${a}" stroke-width="1.5" opacity="${op3}"><path d="M0,0 C${s*0.25},${s*0.12} ${s*0.4},${s*0.4} ${s*0.35},${s*0.7}"/><path d="M0,0 C${s*0.12},${s*0.25} ${s*0.4},${s*0.4} ${s*0.7},${s*0.35}"/><circle cx="${s*0.35}" cy="${s*0.7}" r="${s*0.08}" fill="${a}" opacity="0.1"/><circle cx="${s*0.7}" cy="${s*0.35}" r="${s*0.08}" fill="${a}" opacity="0.1"/></g>`;
+      });
+      return g;
+    })(),
+
+    art_deco: (() => {
+      const s = m*0.12;
+      let g = '';
+      [[0,0],[W,0],[0,H],[W,H]].forEach(([x,y])=>{
+        const sx=x===0?1:-1,sy=y===0?1:-1;
+        g+=`<g transform="translate(${x},${y}) scale(${sx},${sy})" fill="none" stroke="${a}" opacity="${op2}">${Array.from({length:7},(_,j)=>{const r=s*(0.2+j*0.07);return`<path d="M0,0 A${r},${r} 0 0,1 ${r},0" stroke-width="${0.3+j*0.08}"/>`}).join('')}</g>`;
+      });
+      g+=`<g transform="translate(${cx},${cy}) rotate(45)" fill="none" stroke="${a}" opacity="${op2*0.8}"><rect x="${-s*1.2}" y="${-s*1.2}" width="${s*2.4}" height="${s*2.4}" stroke-width="0.8"/><rect x="${-s*0.7}" y="${-s*0.7}" width="${s*1.4}" height="${s*1.4}" stroke-width="0.5"/></g>`;
+      return g;
+    })(),
+
+    modern_clean: (() => `<rect x="0" y="0" width="${W}" height="${Math.max(8,H*0.008)}" fill="${a}" opacity="${op3*0.8}"/><rect x="${Math.max(8,W*0.015)}" y="${Math.max(8,H*0.008)}" width="${W-Math.max(16,W*0.03)}" height="${H-Math.max(16,H*0.016)}" fill="none" stroke="${a}" stroke-width="1.5" opacity="${op2}"/>`)(),
+
+    rose_garden: (() => {
+      const s = m*0.05, bw = s*1.4, count = Math.floor(W/(s*2))+1;
+      let g = '';
+      for(let i=0;i<count;i++){
+        const x = bw + i*s*2;
+        if(x > W-bw) continue;
+        g+=`<circle cx="${x}" cy="${bw}" r="${s*0.35}" fill="none" stroke="${a}" stroke-width="1" opacity="${op3}"/><circle cx="${x}" cy="${bw}" r="${s*0.1}" fill="${a}" opacity="0.12"/>`;
+        g+=`<circle cx="${x}" cy="${H-bw}" r="${s*0.35}" fill="none" stroke="${a}" stroke-width="1" opacity="${op3}"/><circle cx="${x}" cy="${H-bw}" r="${s*0.1}" fill="${a}" opacity="0.12"/>`;
+      }
+      return g;
+    })(),
+
+    lace_trim: (() => {
+      const s = Math.min(W,H), cr = Math.max(10,s*0.025), sp = cr*2;
+      const tc = Math.floor(W/sp)+1, sc = Math.floor(H/sp)+1;
+      let g = `<g fill="none" stroke="${a}" stroke-width="1.2" opacity="${dk?0.3:0.25}">`;
+      for(let i=0;i<tc;i++){const x=Math.min(i*sp+cr,W-cr);g+=`<circle cx="${x}" cy="${cr}" r="${cr}"/><circle cx="${x}" cy="${H-cr}" r="${cr}"/>`}
+      for(let i=0;i<sc;i++){const y=Math.min(i*sp+cr,H-cr);g+=`<circle cx="${cr}" cy="${y}" r="${cr}"/><circle cx="${W-cr}" cy="${y}" r="${cr}"/>`}
+      return g+`</g>`;
+    })()
+  };
+
+  return (P[id] || P.luxury_gold) + '';
+}
+
+/* ===== BUILD INVITATION CARD ===== */
+function buildCard(d) {
+  const s = STYS[d.style], a = d.pCol, tc = d.tc, sc = s.sC, dk = s.dk;
+  const bg = bgSVG(d.style, a, dk);
+  const fD = formatDate(d.eventDate, d.startTime, d.endTime);
+  const cornerColor = dk ? a : a+'60';
+
+  // Divider
+  const divider = `<div class="card-divider">
+    <div class="card-divider-line" style="background:linear-gradient(90deg,transparent,${a})"></div>
+    <div class="card-divider-dot" style="background:${a};box-shadow:0 0 8px ${a}40"></div>
+    <div class="card-divider-line" style="background:linear-gradient(90deg,${a},transparent)"></div>
+  </div>`;
+
+  // Notes
+  let notesHtml = '', ns = [];
+  if(d.dressCode) ns.push(`<span style="font-weight:600;color:${a}">Dress Code:</span> ${d.dressCode}`);
+  if(d.parking) ns.push(`<span style="font-weight:600;color:${a}">Parking:</span> ${d.parking}`);
+  if(d.gifts) ns.push(`<span style="font-weight:600;color:${a}">Gifts:</span> ${d.gifts}`);
+  if(d.specialNotes) ns.push(d.specialNotes);
+  if(ns.length) notesHtml = divider + `<div style="font-size:13px;color:${sc};line-height:2;text-align:center">${ns.join(' &nbsp;·&nbsp; ')}</div>`;
+
+  // RSVP
+  let rsvpHtml = '', rp = [];
+  if(d.rsvpName) rp.push(d.rsvpName);
+  if(d.rsvpPhone) rp.push(d.rsvpPhone);
+  if(d.rsvpEmail) rp.push(d.rsvpEmail);
+  if(rp.length) rsvpHtml = divider + `<div style="text-align:center">
+    <div style="font-size:11px;font-weight:700;color:${a};letter-spacing:5px;margin-bottom:10px;text-transform:uppercase">R.S.V.P.</div>
+    <div style="font-size:14px;color:${sc};line-height:2.2">${rp.join(' &nbsp;|&nbsp; ')}${d.rsvpDeadline ? `<br><span style="font-size:11px;opacity:0.6">Kindly respond by ${formatDate(d.rsvpDeadline,'','')}</span>` : ''}</div>
+  </div>`;
+
+  // Maps
+  const mapsHtml = d.mapsLink ? `<div style="margin-top:6px"><a href="${d.mapsLink}" target="_blank" style="color:${a};font-size:12px;text-decoration:none;font-weight:600;border-bottom:1px solid ${a}40;padding-bottom:2px">📍 View on Google Maps</a></div>` : '';
+
+  return `<div class="card-bg-color" style="background:${s.bg}"></div>
+    <svg class="card-bg-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 960" preserveAspectRatio="xMidYMid slice">${bg}</svg>
+    <div class="card-corner card-corner-tl" style="border-color:${cornerColor}"></div>
+    <div class="card-corner card-corner-tr" style="border-color:${cornerColor}"></div>
+    <div class="card-corner card-corner-bl" style="border-color:${cornerColor}"></div>
+    <div class="card-corner card-corner-br" style="border-color:${cornerColor}"></div>
+    <div class="card-inner" style="font-family:${s.bf};color:${tc}">
+      <div class="card-title" style="font-family:${s.cf};color:${a};opacity:0.85">${d.text.title}</div>
+      ${divider}
+      <div class="card-event-name" style="font-family:${s.cf};color:${tc}">${d.eventName}</div>
+      <div class="card-body" style="color:${sc}">${d.text.body}</div>
+      ${divider}
+      <div class="card-detail-label" style="color:${a}">Event Details</div>
+      <div class="card-detail-text" style="color:${tc}">
+        <div style="font-weight:600;font-size:17px">${fD.split(' at ')[0]}</div>
+        <div style="font-size:15px;color:${a}">${fD.includes(' at ') ? 'at ' + fD.split(' at ')[1] : ''}</div>
+        <div style="margin-top:4px;color:${sc}">${d.venue}</div>
+        ${mapsHtml}
+      </div>
+      ${notesHtml}
+      ${rsvpHtml}
+      <div class="card-closing" style="color:${sc}">
+        ${d.text.closing[0]}<br>
+        <span style="font-weight:600;color:${a};font-style:normal">${d.text.closing[1]} ${d.hostName}</span>
+      </div>
+    </div>`;
+}
+
+/* ===== INIT ===== */
+document.addEventListener('DOMContentLoaded', () => {
+  initEventTypes(); initStyles(); initColors(); initLangs();
+  initColorPickers(); initHarmonies(); initButtons(); checkShared();
+});
+
+function initEventTypes() {
+  const g = document.getElementById('evGrid');
+  g.innerHTML = EVTS.map(e=>`<div class="ec" data-ev="${e.id}"><i class="fa-solid ${e.icon} ei text-2xl mb-2" style="color:${e.c}"></i><div class="text-xs font-semibold">${e.l}</div></div>`).join('');
+  g.querySelectorAll('.ec').forEach(c=>c.addEventListener('click',function(){g.querySelectorAll('.ec').forEach(x=>x.classList.remove('sel'));c.classList.add('sel');APP.evType=c.dataset.ev}));
+}
+
+function initStyles() {
+  const g=document.getElementById('stGrid');
+  g.innerHTML=Object.entries(STYS).map(([k,v])=>`<div class="sc2 ${APP.style===k?'sel':''}" data-st="${k}"><div style="height:60px;background:${v.bg};display:flex;align-items:center;justify-content:center"><i class="fa-solid ${v.icon}" style="color:${v.aC};font-size:18px;opacity:0.6"></i></div><div class="p-2 text-center"><span class="text-xs font-semibold">${v.l}</span></div></div>`).join('');
+  g.querySelectorAll('.sc2').forEach(c=>c.addEventListener('click',function(){g.querySelectorAll('.sc2').forEach(x=>x.classList.remove('sel'));c.classList.add('sel');APP.style=c.dataset.st}));
+}
+
+function initColors() {
+  const b=document.getElementById('colPresets');
+  b.innerHTML=Object.entries(PRESETS).map(([k,v])=>`<div class="csw ${APP.cpreset===k?'sel':''}" data-cp="${k}" title="${k}" style="background:linear-gradient(135deg,${v.p} 50%,${v.s} 50%)"></div>`).join('');
+  b.querySelectorAll('.csw').forEach(c=>c.addEventListener('click',function(){b.querySelectorAll('.csw').forEach(x=>x.classList.remove('sel'));c.classList.add('sel');const p=PRESETS[c.dataset.cp];APP.cpreset=c.dataset.cp;APP.pc=p.p;APP.sc=p.s;APP.tc=p.t;document.getElementById('priCol').value=p.p;document.getElementById('secCol').value=p.s;document.getElementById('terCol').value=p.t;document.getElementById('priHex').textContent=p.p;document.getElementById('secHex').textContent=p.s;document.getElementById('terHex').textContent=p.t}));
+}
+
+function initLangs() {
+  const ls=[{id:'english',l:'English'},{id:'hindi',l:'हिन्दी'},{id:'bengali',l:'বাংলা'},{id:'tamil',l:'தமிழ்'},{id:'telugu',l:'తెలుగు'},{id:'marathi',l:'मराठी'},{id:'mixed',l:'Mixed'}];
+  const g=document.getElementById('lgGrid');
+  g.innerHTML=ls.map(l=>`<div class="lp ${APP.lang===l.id?'sel':''}" data-lg="${l.id}">${l.l}</div>`).join('');
+  g.querySelectorAll('.lp').forEach(c=>c.addEventListener('click',function(){g.querySelectorAll('.lp').forEach(x=>x.classList.remove('sel'));c.classList.add('sel');APP.lang=c.dataset.lg}));
+}
+
+function initColorPickers() {
+  document.getElementById('priCol').addEventListener('input',function(e){APP.pc=e.target.value;document.getElementById('priHex').textContent=e.target.value;APP.cpreset='';document.querySelectorAll('.csw').forEach(x=>x.classList.remove('sel'))});
+  document.getElementById('secCol').addEventListener('input',function(e){APP.sc=e.target.value;document.getElementById('secHex').textContent=e.target.value;APP.cpreset='';document.querySelectorAll('.csw').forEach(x=>x.classList.remove('sel'))});
+  document.getElementById('terCol').addEventListener('input',function(e){APP.tc=e.target.value;document.getElementById('terHex').textContent=e.target.value});
+}
+
+function initHarmonies() {
+  document.getElementById('harmonyRow').innerHTML=HARMONIES.map(h=>`<div class="harmony-chip" style="background:linear-gradient(135deg,${h.p} 40%,${h.s} 60%);color:${isLight(h.p)?'#111':'#fff'}" onclick="applyHarmony('${h.p}','${h.s}','${h.t}')">${h.n}</div>`).join('');
+}
+
+function applyHarmony(p,s,t){APP.pc=p;APP.sc=s;APP.tc=t;document.getElementById('priCol').value=p;document.getElementById('secCol').value=s;document.getElementById('terCol').value=t;document.getElementById('priHex').textContent=p;document.getElementById('secHex').textContent=s;document.getElementById('terHex').textContent=t;APP.cpreset='';document.querySelectorAll('.csw').forEach(x=>x.classList.remove('sel'));showToast('Color harmony applied! ✨','success')}
+function isLight(h){const r=parseInt(h.slice(1,3),16),g=parseInt(h.slice(3,5),16),b=parseInt(h.slice(5,7),16);return(r*299+g*587+b*114)/1000>150}
+
+/* ===== BUTTONS ===== */
+function initButtons() {
+  document.getElementById('btn1Next').addEventListener('click',()=>navigateTo(2));
+  document.getElementById('btn2Back').addEventListener('click',()=>navigateTo(1));
+  document.getElementById('btn2Next').addEventListener('click',()=>navigateTo(3));
+  document.getElementById('btn3Back').addEventListener('click',()=>navigateTo(2));
+  document.getElementById('btn3Gen').addEventListener('click',()=>generateInvitation());
+  document.getElementById('btn4Back').addEventListener('click',()=>navigateTo(3));
+  document.getElementById('btn4Back2').addEventListener('click',()=>navigateTo(3));
+  document.getElementById('btnRegen').addEventListener('click',()=>regenerate());
+  document.getElementById('btnQR').addEventListener('click',()=>openQR());
+  document.getElementById('dlPng').addEventListener('click',()=>downloadPNG());
+  document.getElementById('dlPdf').addEventListener('click',()=>downloadPDF());
+  document.getElementById('dlSvg').addEventListener('click',()=>downloadSVG());
+  document.getElementById('shareB').addEventListener('click',()=>shareLink());
+}
+
+/* ===== NAVIGATION ===== */
+function navigateTo(t) {
+  if(t>APP.step&&!validateStep(APP.step))return;
+  document.getElementById('step'+APP.step).classList.remove('active');
+  APP.step=t;
+  document.getElementById('step'+t).classList.add('active');
+  updateStepUI();window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function updateStepUI() {
+  document.querySelectorAll('.sdot').forEach(d=>{const s=parseInt(d.dataset.s);d.classList.remove('act','dn');if(s<APP.step)d.classList.add('dn');else if(s===APP.step)d.classList.add('act')});
+  ['ln1','ln2','ln3'].forEach((id,i)=>{const el=document.getElementById(id);el.classList.remove('dn','act');if(i+1<APP.step)el.classList.add('dn');else if(i+1===APP.step)el.classList.add('act')});
+}
+
+function validateStep(s) {
+  hideError(1);hideError(2);hideError(3);
+  if(s===1){if(!APP.evType){showError(1,'Please select an event type');return false}if(!getVal('eventName')){showError(1,'Please enter an event name');return false}if(!getVal('eventDate')){showError(1,'Please select a date');return false}if(!getVal('startTime')){showError(1,'Please select a start time');return false}if(!getVal('venue')){showError(1,'Please enter the venue');return false}}
+  if(s===2){if(!getVal('hostName')){showError(2,'Please enter host name(s)');return false}}
+  return true;
+}
+function showError(s,m){const e=document.getElementById('valErr'+s),me=document.getElementById('valMsg'+s);if(e&&me){me.textContent=m;e.classList.add('show');e.scrollIntoView({behavior:'smooth',block:'center'})}}
+function hideError(s){const e=document.getElementById('valErr'+s);if(e)e.classList.remove('show')}
+function getVal(id){const e=document.getElementById(id);return e?e.value.trim():''}
+
+/* ===== DATA ===== */
+function collectData(){return{evType:APP.evType,eventName:getVal('eventName'),eventDate:getVal('eventDate'),startTime:getVal('startTime'),endTime:getVal('endTime'),venue:getVal('venue'),mapsLink:getVal('mapsLink'),hostName:getVal('hostName'),rsvpName:getVal('rsvpName'),rsvpPhone:getVal('rsvpPhone'),rsvpEmail:getVal('rsvpEmail'),rsvpDeadline:getVal('rsvpDeadline'),dressCode:getVal('dressCode'),parking:getVal('parking'),gifts:getVal('gifts'),specialNotes:getVal('specialNotes'),style:APP.style,pCol:APP.pc,sCol:APP.sc,tCol:APP.tc,lang:APP.lang,customMessage:getVal('customMsg')}}
+
+function generateText(d){return{title:'You Are Cordially Invited',body:d.customMessage||`${d.hostName} joyfully invite you to celebrate ${d.eventName}. Your presence would make this occasion truly unforgettable.`,closing:['We look forward to celebrating with you!','With warm regards,']}}
+
+function formatDate(ds,ts,es){if(!ds)return'';const dt=new Date(ds+'T00:00:00'),m=['January','February','March','April','May','June','July','August','September','October','November','December'],dw=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],ft=function(t){if(!t)return'';const h=t.split(':'),hr=+h[0];return(hr%12||12)+':'+h[1]+' '+(hr>=12?'PM':'AM')};let s=dw[dt.getDay()]+', '+m[dt.getMonth()]+' '+dt.getDate()+', '+dt.getFullYear();if(ts)s+=' at '+ft(ts);if(es)s+=' – '+ft(es);return s}
+
+/* ===== GENERATE ===== */
+async function generateInvitation(){if(!validateStep(3))return;document.getElementById('gO').classList.add('sh');await new Promise(r=>setTimeout(r,1500));const d=collectData(),text=generateText(d);APP.gen={...d,text,fD:formatDate(d.eventDate,d.startTime,d.endTime)};renderAIPanels(d);renderCard();renderEditFields(text);renderQuickStyle();document.getElementById('gO').classList.remove('sh');navigateTo(4);showToast('Invitation created! 🎉','success')}
+
+function regenerate(){const d=collectData(),text=generateText(d);APP.gen={...d,text,fD:formatDate(d.eventDate,d.startTime,d.endTime)};renderAIPanels(d);renderCard();renderEditFields(text);showToast('Refreshed! ✨','success')}
+
+function renderAIPanels(d){document.getElementById('aiPanels').innerHTML=`<div class="bg-card/60 border border-border rounded-xl p-4"><div class="text-[10px] font-bold text-accent uppercase tracking-wider mb-2"><i class="fa-solid fa-font mr-1"></i>Typography</div><p class="text-fgDim text-sm font-medium">${STYS[d.style].cf.replace(/"/g,'')} + ${STYS[d.style].bf.replace(/"/g,'')}</p></div><div class="bg-card/60 border border-border rounded-xl p-4"><div class="text-[10px] font-bold text-accent uppercase tracking-wider mb-2"><i class="fa-solid fa-image mr-1"></i>Style</div><p class="text-fgDim text-sm">${STYS[d.style].l}</p></div><div class="bg-card/60 border border-border rounded-xl p-4"><div class="text-[10px] font-bold text-accent uppercase tracking-wider mb-2"><i class="fa-solid fa-swatchbook mr-1"></i>Palette</div><div class="flex gap-1.5">${[d.pCol,d.tc,d.sCol].map(c=>`<div class="flex-1 h-7 rounded-lg" style="background:${c};box-shadow:0 2px 8px ${c}30"></div>`).join('')}</div></div>`}
+
+function renderCard(){if(!APP.gen)return;const el=document.getElementById('invCard');el.innerHTML=buildCard(APP.gen);el.classList.remove('card-reveal');void el.offsetWidth;el.classList.add('card-reveal')}
+
+function renderEditFields(t){document.getElementById('editSec').innerHTML=`<div><label class="edit-label">Title</label><input class="edit-input" id="edTitle" value="${escHtml(t.title)}" oninput="updateCardText()"></div><div><label class="edit-label">Message</label><textarea class="edit-input h-24 resize-none" id="edBody" oninput="updateCardText()">${escHtml(t.body)}</textarea></div><div><label class="edit-label">Closing</label><input class="edit-input" id="edClose" value="${escHtml(t.closing[0])}" oninput="updateCardText()"></div>`}
+function updateCardText(){if(!APP.gen)return;APP.gen.text.title=document.getElementById('edTitle').value;APP.gen.text.body=document.getElementById('edBody').value;APP.gen.text.closing[0]=document.getElementById('edClose').value;renderCard()}
+function escHtml(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+
+function renderQuickStyle(){document.getElementById('qStyle').innerHTML='<span class="text-[10px] text-muted uppercase tracking-wider font-bold mr-1">Style:</span>'+Object.entries(STYS).map(([k,v])=>`<button class="qs-btn ${APP.style===k?'sel':''}" onclick="quickSwitchStyle('${k}')">${v.l}</button>`).join('')}
+function quickSwitchStyle(k){APP.style=k;APP.gen.style=k;renderCard();renderQuickStyle();renderAIPanels(APP.gen)}
+
+/* ===== DOWNLOADS ===== */
+async function downloadPNG(){showToast('Generating PNG...','info');try{const c=await html2canvas(document.getElementById('invCard'),{scale:2.5,useCORS:true,backgroundColor:null,logging:false});const a=document.createElement('a');a.download=(APP.gen.eventName||'invitation').replace(/\s+/g,'_')+'.png';a.href=c.toDataURL('image/png');a.click();showToast('PNG downloaded! ✅','success')}catch(e){showToast('Error generating PNG','error')}}
+async function downloadPDF(){showToast('Generating PDF...','info');try{const c=await html2canvas(document.getElementById('invCard'),{scale:2.5,useCORS:true,backgroundColor:null,logging:false});const{jsPDF}=window.jspdf;const pdf=new jsPDF({orientation:'portrait',unit:'px',format:[c.width,c.height]});pdf.addImage(c.toDataURL('image/png'),'PNG',0,0,c.width,c.height);pdf.save((APP.gen.eventName||'invitation').replace(/\s+/g,'_')+'.pdf');showToast('PDF downloaded! ✅','success')}catch(e){showToast('Error generating PDF','error')}}
+function downloadSVG(){if(!APP.gen)return;const s=STYS[APP.gen.style];const fullSVG=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 960" width="680" height="960"><rect width="680" height="960" fill="${s.bg}"/>${bgSVG(APP.gen.style,APP.gen.pc,s.dk,680,960)}<foreignObject x="0" y="0" width="680" height="960"><div xmlns="http://www.w3.org/1999/xhtml" style="font-family:${s.bf};color:${APP.gen.tc};padding:70px 60px;box-sizing:border-box;width:680px;height:960px">${document.getElementById('invCard').querySelector('.card-inner')?.innerHTML||''}</div></foreignObject></svg>`;const b=new Blob([fullSVG],{type:'image/svg+xml'});const a=document.createElement('a');a.download=(APP.gen.eventName||'invitation').replace(/\s+/g,'_')+'.svg';a.href=URL.createObjectURL(b);a.click();URL.revokeObjectURL(a.href);showToast('SVG downloaded! ✅','success')}
+
+/* ===== SHARE ===== */
+function shareLink(){if(!APP.gen)return;const p=btoa(unescape(encodeURIComponent(JSON.stringify({t:APP.gen.evType,n:APP.gen.eventName,d:APP.gen.eventDate,st:APP.gen.startTime,et:APP.gen.endTime,v:APP.gen.venue,m:APP.gen.mapsLink,h:APP.gen.hostName,s:APP.gen.style,p:APP.gen.pc,sc:APP.gen.sc,l:APP.gen.lang,msg:APP.gen.customMessage}))));const url=location.origin+location.pathname+'?invite='+p;navigator.clipboard?navigator.clipboard.writeText(url).then(()=>showToast('Link copied! 📋','success')):fallbackCopy(url)}
+function fallbackCopy(t){const ta=document.createElement('textarea');ta.value=t;ta.style.cssText='position:fixed;left:-9999px';document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);showToast('Link copied! 📋','success')}
+
+/* ===== QR CODE ===== */
+function openQR(){if(!APP.gen)return;const p=btoa(unescape(encodeURIComponent(JSON.stringify({t:APP.gen.evType,n:APP.gen.eventName,d:APP.gen.eventDate,st:APP.gen.startTime,et:APP.gen.endTime,v:APP.gen.venue,m:APP.gen.mapsLink,h:APP.gen.hostName,s:APP.gen.style,p:APP.gen.pc,sc:APP.gen.sc,l:APP.gen.lang,msg:APP.gen.customMessage}))));const url=location.origin+location.pathname+'?invite='+p;const modal=document.createElement('div');modal.style.cssText='position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.9);display:flex;align-items:center;justify-content:center;flex-direction:column;backdrop-filter:blur(8px)';modal.innerHTML=`<div style="background:#12121f;border:1px solid #222238;border-radius:24px;padding:32px;text-align:center;max-width:360px;width:90%"><h3 style="font-family:'Playfair Display',serif;font-size:1.3em;font-weight:700;margin-bottom:16px;color:#f0ede4">📱 Scan QR Code</h3><div style="background:#fff;padding:16px;border-radius:16px;display:inline-block;margin-bottom:16px"><img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}&bgcolor=ffffff&color=1a1a2e" alt="QR" style="width:200px;height:200px"></div><p style="color:#6a6a80;font-size:12px;margin-bottom:16px">Share this with your guests</p><button onclick="this.closest('div').parentElement.remove()" style="padding:10px 24px;background:#d4a843;color:#06060c;border:none;border-radius:12px;font-weight:700;cursor:pointer;font-size:13px">Close</button></div>`;document.body.appendChild(modal);modal.addEventListener('click',function(e){if(e.target===modal)modal.remove()})}
+
+/* ===== FULLSCREEN ===== */
+function openFullscreen(){if(!APP.gen)return;const fs=document.getElementById('fsOverlay'),fc=document.getElementById('fsCard');fc.innerHTML=buildCard(APP.gen);APP.fsZoom=1;fc.style.transform='scale(1)';document.getElementById('zoomLabel').textContent='100%';fs.classList.add('show')}
+function closeFullscreen(e){if(e&&e.target!==document.getElementById('fsOverlay'))return;document.getElementById('fsOverlay').classList.remove('show')}
+function zoomIn(){APP.fsZoom=Math.min(2,APP.fsZoom+0.25);document.getElementById('fsCard').style.transform=`scale(${APP.fsZoom})`;document.getElementById('zoomLabel').textContent=Math.round(APP.fsZoom*100)+'%'}
+function zoomOut(){APP.fsZoom=Math.max(0.5,APP.fsZoom-0.25);document.getElementById('fsCard').style.transform=`scale(${APP.fsZoom})`;document.getElementById('zoomLabel').textContent=Math.round(APP.fsZoom*100)+'%'}
+function zoomReset(){APP.fsZoom=1;document.getElementById('fsCard').style.transform='scale(1)';document.getElementById('zoomLabel').textContent='100%'}
+
+/* ===== SHARED ===== */
+function checkShared(){const p=new URLSearchParams(location.search),d=p.get('invite');if(!d)return;try{const o=JSON.parse(decodeURIComponent(escape(atob(d))));APP.evType=o.t||'';document.getElementById('eventName').value=o.n||'';document.getElementById('eventDate').value=o.d||'';document.getElementById('startTime').value=o.st||'';document.getElementById('endTime').value=o.et||'';document.getElementById('venue').value=o.v||'';document.getElementById('mapsLink').value=o.m||'';document.getElementById('hostName').value=o.h||'';APP.style=o.s||'luxury_gold';APP.pc=o.p||'#d4a843';APP.sc=o.sc||'#12121f';APP.lang=o.l||'english';document.getElementById('customMsg').value=o.msg||'';document.getElementById('priCol').value=APP.pc;document.getElementById('secCol').value=APP.sc;document.getElementById('priHex').textContent=APP.pc;document.getElementById('secHex').textContent=APP.sc;document.querySelectorAll('.ec').forEach(c=>c.classList.toggle('sel',c.dataset.ev===APP.evType));document.querySelectorAll('.lp').forEach(c=>c.classList.toggle('sel',c.dataset.lg===APP.lang));setTimeout(()=>generateInvitation(),400)}catch(e){console.error(e)}}
+
+/* ===== TOAST ===== */
+function showToast(m,t){t=t||'info';const b=document.getElementById('tB');const cs={success:'border-green-500/60 bg-green-900/50 text-green-200',error:'border-red-500/60 bg-red-900/50 text-red-200',info:'border-accent/60 bg-amber-900/40 text-amber-200'};const ic={success:'fa-check-circle',error:'fa-exclamation-circle',info:'fa-circle-info'};const el=document.createElement('div');el.className='tst '+cs[t];el.innerHTML=`<i class="fa-solid ${ic[t]}"></i><span>${m}</span>`;b.appendChild(el);setTimeout(()=>{el.classList.add('tst-out');setTimeout(()=>el.remove(),300)},2800)}
+
+function lerpColor(a,b,t){const ah=parseInt(a.replace('#',''),16),bh=parseInt(b.replace('#',''),16);const ar=(ah>>16)&0xff,ag=(ah>>8)&0xff,ab=ah&0xff;const br=(bh>>16)&0xff,bg=(bh>>8)&0xff,bb=bh&0xff;const rr=Math.round(ar+(br-ar)*t),rg=Math.round(ag+(bg-ag)*t),rb=Math.round(ab+(bb-ab)*t);return'#'+((1<<24)+(rr<<16)+(rg<<8)+rb).toString(16).slice(1)}
+</script>
+</body>
+</html>
